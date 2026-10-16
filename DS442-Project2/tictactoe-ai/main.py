@@ -1,3 +1,6 @@
+# main.py
+# DS 442 - Question 1: Wild Tic-Tac-Toe
+
 import pygame
 import time
 
@@ -12,6 +15,7 @@ MODE = "TERMINATOR"
 def main():
     board = Board()
 
+    # Set the symbols for each player
     human = Symbol.CIRCLE
     computer = Symbol.CROSS
 
@@ -25,7 +29,7 @@ def main():
         gui.update_display()
         clock.tick(30)
 
-        # Let the AI move on its turn.
+        # Run minimax on the computer's turn
         if MODE == "TERMINATOR":
             if board.turn == computer and not board.is_gameover():
                 move = ai.evaluate_best_move(board)
@@ -37,12 +41,12 @@ def main():
                 running = False
 
             elif event.type == pygame.MOUSEBUTTONUP:
-                # Clicking after a finished game starts another game.
+                # Reset the board after the game ends
                 if board.is_gameover():
                     board.reset()
                     continue
 
-                # In AI mode, only accept clicks on the human's turn.
+                # Only accept clicks on the human's turn
                 if MODE == "TERMINATOR" and board.turn != human:
                     continue
 
