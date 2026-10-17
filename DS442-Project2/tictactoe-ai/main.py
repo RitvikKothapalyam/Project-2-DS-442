@@ -1,5 +1,5 @@
 # main.py
-# DS 442 - Question 1: Wild Tic-Tac-Toe
+# ds 442 question 1 - wild tic tac toe
 
 import pygame
 import time
@@ -15,7 +15,7 @@ MODE = "TERMINATOR"
 def main():
     board = Board()
 
-    # Set the symbols for each player
+    # u are O and the computer is X
     human = Symbol.CIRCLE
     computer = Symbol.CROSS
 
@@ -29,7 +29,7 @@ def main():
         gui.update_display()
         clock.tick(30)
 
-        # Run minimax on the computer's turn
+        # if its the computers turn let it pick a move
         if MODE == "TERMINATOR":
             if board.turn == computer and not board.is_gameover():
                 move = ai.evaluate_best_move(board)
@@ -41,12 +41,12 @@ def main():
                 running = False
 
             elif event.type == pygame.MOUSEBUTTONUP:
-                # Reset the board after the game ends
+                # click after the game ends to start a new one
                 if board.is_gameover():
                     board.reset()
                     continue
 
-                # Only accept clicks on the human's turn
+                # dont let u click when its the computers turn
                 if MODE == "TERMINATOR" and board.turn != human:
                     continue
 
