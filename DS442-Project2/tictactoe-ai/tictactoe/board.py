@@ -3,15 +3,11 @@ from enum import Enum
 
 Square = int
 
-# ---------------------------------------------------------------------------
-# WILD TIC-TAC-TOE RULES (DS/CMPSC 442 Project 2, Q1.1)
-#
-# "LAST_CHANCE" (default): when a player makes three in a row, the opponent
-#     gets ONE more move. If that move makes three in a row for the opponent,
-#     the opponent wins. Otherwise the player who made the first line wins.
-# "MISERE": making three in a row loses immediately (the "doing so results
-#     in a loss" reading of the handout).
-# ---------------------------------------------------------------------------
+# wild tic tac toe rules (ds 442 project 2 q1)
+# LAST_CHANCE = if u make 3 in a row the other player gets 1 more move,
+#   if they make 3 in a row on that move they win, if not u win
+# MISERE = making 3 in a row just loses right away
+# the handout kinda says both so u can switch it here
 RULES = "LAST_CHANCE"
 
 
@@ -21,8 +17,11 @@ class Symbol(Enum):
     EMPTY = "#"
 
 
-def opponent(symbol: "Symbol") -> "Symbol":
-    return Symbol.CROSS if symbol == Symbol.CIRCLE else Symbol.CIRCLE
+def opponent(symbol):
+    # gives back the other players symbol
+    if symbol == Symbol.CIRCLE:
+        return Symbol.CROSS
+    return Symbol.CIRCLE
 
 
 class Board:
@@ -52,16 +51,9 @@ class Board:
         self.squares: dict[[int, int], Square] = self.get_squares()
         self.table: list[Symbol] = self.get_table()
         self.win_conditions: list[list[Square]] = self.get_win_conditions()
-        # Lines that pass through each square (used to check only the lines
-        # a new move could have completed)
-        self.lines_through: dict[Square, list[list[Square]]] = {
-            sq: [line for line in self.win_conditions if sq in line]
-            for sq in range(self.size**2)
-        }
-        # Order the squares were filled in. Wild rules depend on WHO made a
-        # line first and what happened on the very next move, so the board
-        # has to remember move order, not just the final picture.
-        self.history: list[Square] = []
+        # list of the moves in order. we need this cuz for the wild rules
+        # it matters who made 3 in a row first and what the next move was
+        self.history = []
 
         self.first_move: Symbol = Symbol.CIRCLE
         self.turn: Symbol = self.first_move
@@ -138,7 +130,7 @@ class Board:
         """Reset the board and change the turn
         """
         self.table = self.get_table()
-        self.history = []
+        self.history = []  # clear the moves for the new game
         self.first_move =Symbol.CROSS if self.first_move == Symbol.CIRCLE else Symbol.CIRCLE
         self.turn = self.first_move
 
@@ -210,64 +202,67 @@ class Board:
         """
         return len(self.empty_squares) == 0 and self.winner() is None
 
-    def _makes_line(self, square: Square, symbol: Symbol,
-                    table: list[Symbol]) -> bool:
-        """True if `symbol` has three in a row through `square` on `table`"""
-        return any(
-            all(table[sq] == symbol for sq in line)
-            for line in self.lines_through[square])
+    def makes_line(self, square, symbol, table):
+        # checks if putting symbol on this square made 3 in a row
+        for line in self.win_conditions:
+            if square not in line:
+                continue
+            count = 0
+            for sq in line:
+                if table[sq] == symbol:
+                    count += 1
+            if count == self.size:
+                return True
+        return False
 
-    def first_line(self) -> Optional[tuple[int, Symbol]]:
-        """Replay the moves in order and find the first one that made a line
-
-        Returns:
-            Optional[tuple[int, Symbol]]: (index in history, symbol of the
-            player who made the line), or None if nobody has a line yet
-        """
+    def first_line(self):
+        # go thru the moves in order on a blank board and find the first
+        # move that made 3 in a row. gives back (which move, who did it)
+        # or None if nobody has 3 in a row yet
         replay = self.get_table()
-        for i, square in enumerate(self.history):
+        for i in range(len(self.history)):
+            square = self.history[i]
             symbol = self.table[square]
             replay[square] = symbol
-            if self._makes_line(square, symbol, replay):
+            if self.makes_line(square, symbol, replay):
                 return i, symbol
         return None
 
-    def pending_line(self) -> Optional[Symbol]:
-        """LAST_CHANCE rule: symbol of the player who just made a line while
-        the opponent still has their one reply move left (else None)"""
+    def pending_line(self):
+        # if someone just made 3 in a row and the other player still gets
+        # there last move, give back who made the line. otherwise None
+        # (the gui uses this to show the last chance message)
         if RULES != "LAST_CHANCE":
             return None
         first = self.first_line()
         if first is None:
             return None
         index, maker = first
-        if index == len(self.history) - 1 and self.empty_squares:
+        if index == len(self.history) - 1 and len(self.empty_squares) > 0:
             return maker
         return None
 
-    def winner(self) -> Optional[Symbol]:
-        """Get the winner of the match under wild tic-tac-toe rules
-
-        Returns:
-            Optional[Symbol]: Winner's symbol, or None if no winner (yet)
-        """
+    def winner(self):
+        # figure out who won with the wild rules, None if nobody yet
         first = self.first_line()
         if first is None:
             return None
         index, maker = first
 
         if RULES == "MISERE":
-            # Making three in a row loses right away
+            # making 3 in a row = u lose
             return opponent(maker)
 
-        # LAST_CHANCE: the opponent gets exactly one reply move
+        # LAST_CHANCE rules
         if index == len(self.history) - 1:
-            if self.empty_squares:
-                return None  # waiting for the opponent's last-chance move
-            return maker  # board is full, opponent has no reply
+            # the line was the last move so far
+            if len(self.empty_squares) > 0:
+                return None  # other player still gets there last move
+            return maker  # board full so they cant answer, maker wins
+        # check if the other players next move made 3 in a row for them
         reply = self.history[index + 1]
-        if self._makes_line(reply, opponent(maker), self.table):
-            return opponent(maker)  # opponent answered with their own line
+        if self.makes_line(reply, opponent(maker), self.table):
+            return opponent(maker)
         return maker
 
     def is_gameover(self) -> bool:
@@ -295,7 +290,7 @@ class Board:
             value (Symbol): symbol
         """
         self.table[square] = value
-        self.history.append(square)
+        self.history.append(square)  # remember the move order
 
     def undo(self, square: Square):
         """Change the square's value to empty
@@ -304,9 +299,8 @@ class Board:
             square (Square): square name
         """
         self.table[square] = Symbol.EMPTY
-        if self.history and self.history[-1] == square:
-            self.history.pop()
-        elif square in self.history:
+        # take it out of the move list too
+        if square in self.history:
             self.history.remove(square)
 
     def move(self, square: Square):
