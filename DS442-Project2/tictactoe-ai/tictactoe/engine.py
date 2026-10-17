@@ -1,75 +1,69 @@
 from tictactoe.board import Board
 import random
 
-Square = int
-Score = int
 
-
+# minimax with alpha beta for wild tic tac toe
+# the search is basically the same as normal tic tac toe, the only thing
+# thats different is who wins and when the game ends (thats all in board.py)
+# we cant stop when someone makes 3 in a row cuz the other player still
+# gets there last move, so we just keep going till is_gameover() says its over
 class Engine:
-    """Minimax + alpha-beta player for WILD tic-tac-toe.
-
-    The search itself is the same as classic tic-tac-toe; what changes is
-    *when the game ends and who wins*, which comes from Board.winner()
-    (wild rules live in board.py). Because of the last-chance rule the
-    search must keep going after someone makes a line, so the game is only
-    over when Board.is_gameover() says so.
-    """
 
     WIN_SCORE = 100
 
-    def __init__(self, ai, foe, level: int):
+    def __init__(self, ai, foe, level):
         self.ai = ai
         self.foe = foe
         self.level = level
 
-    def minimax(self, board: Board, ai_turn: bool, depth: int, alpha: float,
-                beta: float) -> tuple:
+    def minimax(self, board, ai_turn, depth, alpha, beta):
         if board.is_gameover() or depth >= self.level:
             return self.evaluate_board(board, depth), None
 
-        available_moves = board.empty_squares
-        if len(available_moves) == board.size**2 and board.size == 3:
-            # Empty board: in wild tic-tac-toe the opening matters. Solving
-            # the full game shows the CENTER is the best first move under
-            # both rule sets (it forces a win with LAST_CHANCE, and it is
-            # the only opening that doesn't lose with MISERE), so play it
-            # instead of spending time searching the whole tree.
+        moves = board.empty_squares
+
+        # if the board is empty just go middle. we checked every game and
+        # middle is the best first move for both rules so no point searching
+        if len(moves) == 9:
             return 0, 4
 
-        # Try moves in random order so the AI doesn't always play the same
-        # game when several moves are equally good
-        random.shuffle(available_moves)
+        # mix up the moves so the ai doesnt play the same game every time
+        random.shuffle(moves)
 
         if ai_turn:
-            max_eval = float('-inf')
+            # ai wants the biggest score
+            best = -1000
             best_move = None
-            for move in available_moves:
+            for move in moves:
                 board.push(move, self.ai)
-                eval_ = self.minimax(board, False, depth + 1, alpha, beta)[0]
+                score = self.minimax(board, False, depth + 1, alpha, beta)[0]
                 board.undo(move)
-                if eval_ > max_eval:
-                    max_eval, best_move = eval_, move
-                alpha = max(alpha, max_eval)
+                if score > best:
+                    best = score
+                    best_move = move
+                alpha = max(alpha, best)
                 if alpha >= beta:
-                    break
-            return max_eval, best_move
+                    break  # other player wont let this happen so stop
+            return best, best_move
         else:
-            min_eval = float('inf')
+            # other player wants the smallest score
+            best = 1000
             best_move = None
-            for move in available_moves:
+            for move in moves:
                 board.push(move, self.foe)
-                eval_ = self.minimax(board, True, depth + 1, alpha, beta)[0]
+                score = self.minimax(board, True, depth + 1, alpha, beta)[0]
                 board.undo(move)
-                if eval_ < min_eval:
-                    min_eval, best_move = eval_, move
-                beta = min(beta, min_eval)
+                if score < best:
+                    best = score
+                    best_move = move
+                beta = min(beta, best)
                 if beta <= alpha:
-                    break
-            return min_eval, best_move
+                    break  # same thing here
+            return best, best_move
 
-    def evaluate_board(self, board: Board, depth: int) -> Score:
-        """Win = big positive, loss = big negative, draw/unknown = 0.
-        Depth is used so the AI prefers FASTER wins and SLOWER losses."""
+    def evaluate_board(self, board, depth):
+        # win = big number, lose = negative, tie or not done = 0
+        # depth makes it win faster and lose slower if it has to lose
         winner = board.winner()
         if winner == self.ai:
             return self.WIN_SCORE - depth
@@ -77,7 +71,6 @@ class Engine:
             return -self.WIN_SCORE + depth
         return 0
 
-    def evaluate_best_move(self, board: Board) -> Square:
-        best_move = self.minimax(board, True, 0, float('-inf'),
-                                 float('inf'))[1]
-        return best_move
+    def evaluate_best_move(self, board):
+        # start the search and give back the move it picked
+        return self.minimax(board, True, 0, -1000, 1000)[1]
