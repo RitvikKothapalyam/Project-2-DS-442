@@ -98,8 +98,13 @@ class Gui:
             self.display_text("Batman Wins!", 50, 'center',
                               WINDOW_WIDTH - MARGIN + 10)
         elif self.board.pending_line() is not None:
-            name = "Newbie" if self.board.turn == Symbol.CIRCLE else "Batman"
-            self.display_text(f"Last chance for {name}!", 20, 'center',
+            # somebody just made 3 in a row so show the other player
+            # gets 1 last move (wild rules thing)
+            if self.board.turn == Symbol.CIRCLE:
+                name = "Newbie"
+            else:
+                name = "Batman"
+            self.display_text("Last chance for " + name + "!", 20, 'center',
                               WINDOW_WIDTH - MARGIN + 10, YELLOW)
         else:
             if self.board.turn == Symbol.CIRCLE:
