@@ -46,7 +46,7 @@ def main():
                     board.reset()
                     continue
 
-                # dont let u click when its the computers turn
+                # don't let u click when its the computers turn
                 if MODE == "TERMINATOR" and board.turn != human:
                     continue
 
